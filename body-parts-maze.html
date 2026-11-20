@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Robo’s Body Parts Hunt – เกมตามหาชิ้นส่วนร่างกาย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dff3ee;
+  --surface:#ffffff;
+  --surface-2:#eef8f5;
+  --text:#1f1b46;
+  --muted:#5d5a80;
+  --bubble:#ffd23f;
+  --on-bubble:#1f1b46;
+  --primary:#3d5afe;
+  --on-primary:#ffffff;
+  --ok:#1f9d55;
+  --ok-soft:#d5f5e3;
+  --bad:#e0344a;
+  --heart:#ff4d6d;
+  --scrim:rgba(31,27,70,.55);
+  --maze-bg:#211d55;
+  --wall:#5f7bff;
+  --wall-hi:#8fa3ff;
+  --room:#fffdf5;
+  --room-done:#cdeedd;
+  --room-text:#1f1b46;
+  --door:#ffd23f;
+  --ink-shadow:0 4px 0 rgba(31,27,70,.18);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13122b; --surface:#221f48; --surface-2:#2b2858; --text:#f3f1ff; --muted:#b4b0dc;
+    --bubble:#ffd23f; --on-bubble:#1f1b46; --primary:#7b8cff; --on-primary:#12102a;
+    --ok:#4fd48a; --ok-soft:#1c4434; --bad:#ff6b7d; --heart:#ff6b86; --scrim:rgba(5,4,18,.7);
+    --maze-bg:#0d0c24; --wall:#4656d6; --wall-hi:#6f80ff;
+    --room:#27245a; --room-done:#1c4434; --room-text:#f3f1ff; --door:#ffd23f;
+    --ink-shadow:0 4px 0 rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13122b; --surface:#221f48; --surface-2:#2b2858; --text:#f3f1ff; --muted:#b4b0dc;
+  --bubble:#ffd23f; --on-bubble:#1f1b46; --primary:#7b8cff; --on-primary:#12102a;
+  --ok:#4fd48a; --ok-soft:#1c4434; --bad:#ff6b7d; --heart:#ff6b86; --scrim:rgba(5,4,18,.7);
+  --maze-bg:#0d0c24; --wall:#4656d6; --wall-hi:#6f80ff;
+  --room:#27245a; --room-done:#1c4434; --room-text:#f3f1ff; --door:#ffd23f;
+  --ink-shadow:0 4px 0 rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:'Mali','Leelawadee UI','Thonburi',system-ui,sans-serif;
+  overflow:hidden;-webkit-tap-highlight-color:transparent;
+}
+button{font-family:inherit;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+
+.app{height:100%;max-width:1100px;margin:0 auto;padding:10px 12px 8px;display:flex;flex-direction:column;gap:8px}
+
+/* HUD */
+.hud{display:flex;align-items:center;gap:8px}
+.stat{
+  background:var(--surface);border-radius:14px;padding:5px 12px;font-weight:700;
+  font-size:clamp(15px,2.2vw,20px);box-shadow:var(--ink-shadow);display:flex;gap:6px;align-items:center;
+  font-variant-numeric:tabular-nums;white-space:nowrap
+}
+.stat .heart{color:var(--heart)}
+.spacer{flex:1}
+.icon-btn{
+  border:0;background:var(--surface);width:40px;height:40px;border-radius:12px;font-size:18px;
+  box-shadow:var(--ink-shadow);cursor:pointer;flex:none;touch-action:manipulation
+}
+.icon-btn:active{transform:translateY(2px);box-shadow:none}
+
+/* Robo's speech bubble — the command */
+.command{
+  position:relative;display:flex;align-items:center;gap:10px;background:var(--bubble);color:var(--on-bubble);
+  border-radius:22px;padding:8px 10px 8px 14px;box-shadow:var(--ink-shadow);margin-left:44px
+}
+.command::before{
+  content:"";position:absolute;left:-12px;top:50%;margin-top:-9px;border:9px solid transparent;
+  border-right:14px solid var(--bubble);border-left:0
+}
+.robo-face{position:absolute;left:-46px;top:50%;transform:translateY(-50%);width:36px;height:36px}
+.cmd-step{font-size:clamp(12px,1.6vw,15px);font-weight:600;opacity:.75;white-space:nowrap}
+.cmd-text{font-size:clamp(21px,3.8vw,36px);font-weight:700;flex:1;line-height:1.15;min-width:0}
+.cmd-text .part{text-decoration:underline;text-decoration-thickness:4px;text-underline-offset:5px;text-decoration-color:rgba(31,27,70,.35)}
+.cmd-text.pop{animation:pop .45s ease}
+@keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+.say-btn{border:0;background:rgba(31,27,70,.12);color:var(--on-bubble);width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;flex:none}
+
+/* Stage */
+.main{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;touch-action:none}
+canvas{display:block;border-radius:14px;max-width:100%;max-height:100%}
+.stage.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.toast{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.85);opacity:0;
+  transition:opacity .18s,transform .18s;background:var(--surface);color:var(--text);
+  padding:12px 22px;border-radius:20px;font-weight:700;font-size:clamp(18px,3.2vw,30px);
+  text-align:center;pointer-events:none;box-shadow:0 6px 0 rgba(0,0,0,.25);border:4px solid var(--primary);max-width:90%
+}
+.toast small{display:block;font-size:.55em;font-weight:600;color:var(--muted);margin-top:2px}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.toast.good{border-color:var(--ok)}
+.toast.bad{border-color:var(--bad)}
+
+/* Collection */
+.collection{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.slot{background:var(--surface);border-radius:12px;text-align:center;padding:3px 2px 4px;box-shadow:var(--ink-shadow);min-width:0;border:2px dashed transparent}
+.slot .e{font-size:clamp(18px,3vw,28px);line-height:1.25;height:clamp(26px,4vw,38px);display:flex;align-items:center;justify-content:center;filter:grayscale(1);opacity:.35}
+.slot .e img{height:100%;width:auto}
+.toast img{height:1.35em;vertical-align:-.35em}
+.vocab img{height:22px;vertical-align:-6px}
+.cmd-th{display:block;font-size:.5em;font-weight:600;opacity:.8;margin-top:2px}
+.slot .w{font-size:clamp(10px,1.6vw,14px);font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.done{background:var(--ok-soft);border-color:var(--ok)}
+.slot.done .e{filter:none;opacity:1}
+.slot.done .w{color:var(--text)}
+
+/* D-pad */
+.dpad{display:none;grid-template-columns:repeat(3,60px);grid-template-rows:repeat(2,54px);gap:6px;justify-content:center;touch-action:none}
+.dpad button{border:0;border-radius:14px;background:var(--surface);font-size:24px;box-shadow:var(--ink-shadow);touch-action:none;user-select:none;-webkit-user-select:none}
+.dpad button:active,.dpad button.on{background:var(--primary);color:var(--on-primary);transform:translateY(2px);box-shadow:none}
+.dpad .u{grid-column:2;grid-row:1}.dpad .l{grid-column:1;grid-row:2}.dpad .d{grid-column:2;grid-row:2}.dpad .r{grid-column:3;grid-row:2}
+@media (pointer:coarse){.dpad{display:grid}}
+@media (orientation:landscape) and (max-height:600px) and (pointer:coarse){
+  .main{flex-direction:row;align-items:center}
+  .dpad{grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,52px)}
+  .dpad .u{grid-row:1}.dpad .l{grid-row:2}.dpad .r{grid-row:2}.dpad .d{grid-row:3;grid-column:2}
+  .robo-face{display:none}.command{margin-left:0}.command::before{display:none}
+}
+
+/* Overlays */
+.overlay{
+  position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:var(--scrim);
+  padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px))
+}
+.overlay.show{display:flex}
+.card{
+  background:var(--surface);color:var(--text);border-radius:26px;padding:20px 22px 22px;max-width:540px;width:100%;
+  max-height:100%;overflow:auto;box-shadow:0 8px 0 rgba(0,0,0,.25)
+}
+.card h1,.card h2{margin:.1em 0 .2em;line-height:1.15}
+.card h1{font-size:clamp(26px,5vw,38px)}
+.card h2{font-size:clamp(24px,4.4vw,32px)}
+.card p{margin:.3em 0 .6em;line-height:1.5;color:var(--muted);font-size:16px}
+.hero{display:flex;align-items:center;gap:14px}
+.hero svg{flex:none;width:72px;height:72px}
+.howto{margin:8px 0 10px;padding-left:22px;line-height:1.55;font-size:15.5px}
+.howto li{margin:2px 0}
+.hint{font-size:14px;color:var(--muted);background:var(--surface-2);border-radius:12px;padding:8px 12px;margin-bottom:12px}
+.field{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}
+.field>span{font-weight:700}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:2px solid var(--primary);background:transparent;border-radius:12px;padding:6px 14px;font-weight:700;font-size:15px;cursor:pointer}
+.seg button.active{background:var(--primary);color:var(--on-primary)}
+.check{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:15.5px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--primary)}
+.best{font-size:14px;color:var(--muted);min-height:1.2em;margin:6px 0 2px}
+.btn{
+  border:0;border-radius:16px;padding:12px 20px;font-weight:700;font-size:18px;cursor:pointer;
+  background:var(--surface-2);box-shadow:var(--ink-shadow);touch-action:manipulation
+}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.wide{width:100%;font-size:21px;margin-top:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.row .btn{flex:1}
+.result{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 4px}
+.result div{background:var(--surface-2);border-radius:14px;padding:8px 10px;text-align:center}
+.result b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+.result span{font-size:13px;color:var(--muted)}
+.stars{font-size:44px;letter-spacing:6px;text-align:center;margin:4px 0}
+.stars .off{filter:grayscale(1);opacity:.3}
+.vocab{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.vocab span{background:var(--surface-2);border-radius:10px;padding:3px 9px;font-size:14px}
+
+.home-card{text-align:center;max-width:460px}
+.robo-big{width:116px;height:116px;display:block;margin:4px auto 8px}
+.menu-btns{display:grid;gap:12px;margin-top:18px}
+.big-btn{font-size:22px;padding:14px 20px}
+.big-btn small{font-size:14px;font-weight:600;opacity:.75;margin-left:4px}
+.name-field{display:flex;flex-direction:column;gap:6px;margin:14px 0 2px;font-weight:700;font-size:16px}
+.name-field input{font:inherit;font-size:20px;font-weight:600;padding:10px 14px;border-radius:14px;border:2px solid var(--primary);background:var(--surface-2);color:var(--text);width:100%}
+.err{color:var(--bad);font-size:14px;font-weight:600;min-height:1.3em}
+.rec-card{max-width:720px}
+.tabs{display:flex;gap:6px;margin:10px 0}
+.tabs button{flex:1;border:0;border-radius:12px;padding:9px;font-weight:700;font-size:17px;background:var(--surface-2);cursor:pointer}
+.tabs button.active{background:var(--primary);color:var(--on-primary)}
+.table-wrap{overflow:auto;max-height:52vh;border-radius:14px;background:var(--surface-2)}
+table.rec{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.rec th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:9px 10px;font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+.rec td{padding:8px 10px;border-top:1px solid rgba(127,127,127,.2);white-space:nowrap}
+.rec td:first-child{font-weight:700;text-align:center}
+.rec td.nm{font-weight:700;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.rec tr.me td{background:var(--ok-soft)}
+.rec .tag{font-size:11px;font-weight:600;background:var(--bubble);color:var(--on-bubble);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.rec .lost{color:var(--muted)}
+.rec td.empty{padding:28px 12px;text-align:center;color:var(--muted);white-space:normal}
+.rank-line{text-align:center;font-weight:700;color:var(--text)!important;margin:8px 0 0!important}
+@media (max-width:560px){.name-stat{display:none!important}}
+
+@media (prefers-reduced-motion: reduce){
+  .cmd-text.pop,.stage.shake{animation:none}
+  .toast{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hud">
+    <div class="stat" title="เวลา">⏱ <span id="time">00:00</span></div>
+    <div class="stat" title="ชีวิต"><span class="heart">♥</span> <span id="lives">10</span></div>
+    <div class="stat" title="เก็บได้">🧩 <span id="found">0/7</span></div>
+    <div class="stat name-stat" id="nameStat" style="display:none"></div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="soundBtn" aria-label="เปิด/ปิดเสียง">🔊</button>
+    <button class="icon-btn" id="pauseBtn" aria-label="หยุดชั่วคราว">⏸</button>
+    <button class="icon-btn" id="fsBtn" aria-label="เต็มจอ">⛶</button>
+  </header>
+
+  <div class="command" aria-live="polite">
+    <svg class="robo-face" viewBox="0 0 40 40" aria-hidden="true">
+      <line x1="20" y1="2" x2="20" y2="9" stroke="#1f1b46" stroke-width="2.5"/>
+      <circle cx="20" cy="3.5" r="3" fill="#ff4d6d"/>
+      <rect x="4" y="9" width="32" height="28" rx="12" fill="#ffd23f" stroke="#1f1b46" stroke-width="2.5"/>
+      <circle cx="14" cy="22" r="4.5" fill="#fff" stroke="#1f1b46" stroke-width="1.5"/><circle cx="15" cy="22" r="2" fill="#1f1b46"/>
+      <circle cx="26" cy="22" r="4.5" fill="#fff" stroke="#1f1b46" stroke-width="1.5"/><circle cx="27" cy="22" r="2" fill="#1f1b46"/>
+      <path d="M15 30 Q20 33 25 30" fill="none" stroke="#1f1b46" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div class="cmd-text" id="cmdText">Press Start!</div>
+    <div class="cmd-step" id="cmdStep"></div>
+    <button class="say-btn" id="sayBtn" aria-label="ฟังคำสั่งอีกครั้ง">🔊</button>
+  </div>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <canvas id="game" aria-label="แผนที่เกม"></canvas>
+      <div class="toast" id="toast"></div>
+    </div>
+    <div class="dpad" id="dpad">
+      <button class="u" data-dir="up" aria-label="ขึ้น">▲</button>
+      <button class="l" data-dir="left" aria-label="ซ้าย">◀</button>
+      <button class="d" data-dir="down" aria-label="ลง">▼</button>
+      <button class="r" data-dir="right" aria-label="ขวา">▶</button>
+    </div>
+  </div>
+
+  <div class="collection" id="collection"></div>
+</div>
+
+<!-- Home -->
+<div class="overlay show" id="home">
+  <div class="card home-card">
+    <svg viewBox="0 0 40 40" aria-hidden="true" class="robo-big">
+        <line x1="20" y1="2" x2="20" y2="9" stroke="#1f1b46" stroke-width="2.5"/>
+        <circle cx="20" cy="3.5" r="3" fill="#ff4d6d"/>
+        <rect x="4" y="9" width="32" height="28" rx="12" fill="#ffd23f" stroke="#1f1b46" stroke-width="2.5"/>
+        <circle cx="14" cy="22" r="4.5" fill="#fff" stroke="#1f1b46" stroke-width="1.5"/><circle cx="15" cy="22" r="2" fill="#1f1b46"/>
+        <circle cx="26" cy="22" r="4.5" fill="#fff" stroke="#1f1b46" stroke-width="1.5"/><circle cx="27" cy="22" r="2" fill="#1f1b46"/>
+        <path d="M15 30 Q20 33 25 30" fill="none" stroke="#1f1b46" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    <h1>Robo’s Body Parts Hunt</h1>
+    <p>ช่วยโรโบตามหาชิ้นส่วนร่างกายทั้ง 7 ชิ้น<br>Head · Hair · Eyes · Nose · Arms · Hand · Legs</p>
+    <div class="menu-btns">
+      <button class="btn primary big-btn" id="homeStart">▶ Start</button>
+      <button class="btn big-btn" id="homeRec">🏆 Leaderboard <small>ตารางคะแนน</small></button>
+    </div>
+  </div>
+</div>
+
+<!-- Game setup -->
+<div class="overlay" id="menu">
+  <div class="card">
+    <div class="hero">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <line x1="20" y1="2" x2="20" y2="9" stroke="#1f1b46" stroke-width="2.5"/>
+        <circle cx="20" cy="3.5" r="3" fill="#ff4d6d"/>
+        <rect x="4" y="9" width="32" height="28" rx="12" fill="#ffd23f" stroke="#1f1b46" stroke-width="2.5"/>
+        <circle cx="14" cy="22" r="4.5" fill="#fff" stroke="#1f1b46" stroke-width="1.5"/><circle cx="15" cy="22" r="2" fill="#1f1b46"/>
+        <circle cx="26" cy="22" r="4.5" fill="#fff" stroke="#1f1b46" stroke-width="1.5"/><circle cx="27" cy="22" r="2" fill="#1f1b46"/>
+        <path d="M15 30 Q20 33 25 30" fill="none" stroke="#1f1b46" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>Robo’s Body Parts Hunt</h1>
+        <p style="margin:0">ตามหาชิ้นส่วนร่างกาย · Parts of the Body</p>
+      </div>
+    </div>
+    <label class="name-field"><span>ชื่อผู้เล่น</span>
+      <input type="text" id="playerName" maxlength="20" autocomplete="off" spellcheck="false" placeholder="พิมพ์ชื่อของเธอที่นี่">
+    </label>
+    <div class="err" id="nameErr" role="alert"></div>
+    <p>โรโบทำชิ้นส่วนร่างกายหายไป 7 ชิ้น ช่วยโรโบตามหาให้ครบ ก่อนมอนสเตอร์จะจับได้!</p>
+    <ol class="howto">
+      <li>ฟังหรืออ่านคำสั่ง เช่น <b>Touch your nose</b>, <b>Raise your hand</b>, <b>Close your eyes</b></li>
+      <li>พาโรโบเดินเข้าไปในรูปที่ตรงกับคำสั่ง เข้าจากด้านไหนก็ได้ (รูปที่เก็บแล้วเดินผ่านได้ และมอนสเตอร์เข้าไปในรูปไม่ได้)</li>
+      <li>โดนมอนสเตอร์ หรือเข้าห้องผิด เสีย 1 ชีวิต แล้วกลับไปเริ่มกลางแผนที่ (มี 10 ชีวิต)</li>
+      <li>เก็บให้ครบ 7 ห้องให้เร็วที่สุด!</li>
+    </ol>
+    <div class="hint">กดค้างไว้เพื่อเดิน ปล่อยเพื่อหยุด<br>⌨️ คอมพิวเตอร์: ปุ่มลูกศร หรือ W A S D · Spacebar ฟังคำสั่งซ้ำ · P หยุดเกม<br>📱 แท็บเล็ต/มือถือ: กดปุ่มบนจอค้างไว้ หรือแตะแผนที่ค้างแล้วลากไปทางที่จะเดิน</div>
+    <div class="field"><span>ระดับ</span>
+      <div class="seg" id="diffSeg">
+        <button data-d="easy">ง่าย</button>
+        <button data-d="normal" class="active">ปกติ</button>
+        <button data-d="hard">ยาก</button>
+      </div>
+    </div>
+    <div class="field"><span>คำสั่ง</span>
+      <div class="seg" id="cmdSeg">
+        <button data-v="1" class="active">หลากหลาย</button>
+        <button data-v="0">Touch your… อย่างเดียว</button>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" id="optWords"> แสดงคำศัพท์ใต้รูปในห้อง (โหมดช่วย)</label>
+    <label class="check"><input type="checkbox" id="optTh"> แสดงคำแปลภาษาไทยใต้คำสั่ง (โหมดช่วย)</label>
+    <label class="check"><input type="checkbox" id="optSound" checked> เปิดเสียงพูดคำสั่งภาษาอังกฤษ</label>
+    <div class="row">
+      <button class="btn" id="setupBack">← กลับ</button>
+      <button class="btn primary" id="startBtn" style="flex:2">▶ เริ่มเกม</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div class="overlay" id="pauseOv">
+  <div class="card" style="max-width:380px;text-align:center">
+    <h2>หยุดชั่วคราว</h2>
+    <p>เวลาจะหยุดนับจนกว่าจะเล่นต่อ</p>
+    <div class="row">
+      <button class="btn primary" id="resumeBtn">▶ เล่นต่อ</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="restartBtn">↻ เริ่มใหม่</button>
+      <button class="btn" id="menuBtn">☰ เมนูหลัก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Leaderboard -->
+<div class="overlay" id="recOv">
+  <div class="card rec-card">
+    <h2>🏆 Leaderboard</h2>
+    <p>ประวัติการเล่นบนเครื่องนี้ เรียงจากผลงานดีที่สุด: เก็บได้มากกว่า → ใช้เวลาน้อยกว่า → เหลือชีวิตมากกว่า</p>
+    <div class="tabs" id="recTabs" role="tablist">
+      <button data-d="easy" role="tab">ง่าย</button>
+      <button data-d="normal" role="tab">ปกติ</button>
+      <button data-d="hard" role="tab">ยาก</button>
+    </div>
+    <div class="table-wrap">
+      <table class="rec">
+        <thead><tr><th>อันดับ</th><th>ชื่อ</th><th>เก็บได้</th><th>เวลา</th><th>ชีวิตเหลือ</th><th>ดาว</th><th>วันที่เล่น</th></tr></thead>
+        <tbody id="recBody"></tbody>
+      </table>
+    </div>
+    <div class="row">
+      <button class="btn" id="recClear">ล้างประวัติโหมดนี้</button>
+      <button class="btn primary" id="recClose">☰ เมนูหลัก</button>
+    </div>
+  </div>
+</div>
+
+<!-- End -->
+<div class="overlay" id="endOv">
+  <div class="card" style="max-width:440px" id="endCard"></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- Map ----------
+   # wall   . path   d door (Robo can enter a room only from a door tile)   P start   1-7 rooms */
+const MAP = [
+  "#############################",
+  "#111....#...#333#...#....222#",
+  "#111d.#.#.#.d333d.#.#.#.d222#",
+  "#111........#333#........222#",
+  "##d##.#.#.#.#.d.#.#.#.#.##d##",
+  "#.......#.#.......#.#.......#",
+  "#.#######.###.#.###.#######.#",
+  "#.......#...#.#.#...#.......#",
+  "##d##.#.###.#.#.#.###.#.##d##",
+  "#444..#.#...........#.#..555#",
+  "#444d.#.#.##..P..##.#.#.d555#",
+  "#444..#.#...........#.#..555#",
+  "##d##.#.###.#####.###.#.##d##",
+  "#...........................#",
+  "#.#.#.#.###.#####.###.#.#.#.#",
+  "#...#...#...........#...#...#",
+  "#.d.#####.#.##.##.#.#####.d.#",
+  "#666....#.#.#...#.#.#....777#",
+  "#666d.#.#.#.#...#.#.#.#.d777#",
+  "#666........#...#........777#",
+  "#############################"
+];
+const ROWS = MAP.length, COLS = MAP[0].length;
+const MONSTER_HOMES = [{x:14,y:18},{x:13,y:18},{x:15,y:18},{x:14,y:19}];
+const MONSTER_COLORS = ['#ff4d6d','#3ddc97','#ff9f1c','#b388ff'];
+const ROOM_COLORS = ['#ff6b6b','#ff9f43','#f9c80e','#2ecc71','#3d9bff','#a66cff','#ff6fb5'];
+
+const INK = '#3B2A4F', SKIN = '#FFD3B0';
+const ART = {
+  head: `<g stroke="${INK}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="21" cy="66" r="11" fill="${SKIN}"/><circle cx="99" cy="66" r="11" fill="${SKIN}"/>
+    <ellipse cx="60" cy="64" rx="39" ry="42" fill="${SKIN}"/>
+    <path d="M21 60 C18 28 38 14 60 14 C84 14 103 28 99 60 C92 48 84 42 74 40 C68 48 56 50 46 45 C38 52 30 56 21 60Z" fill="#6B3E26"/>
+    <circle cx="46" cy="68" r="4.5" fill="${INK}" stroke="none"/><circle cx="74" cy="68" r="4.5" fill="${INK}" stroke="none"/>
+    <circle cx="37" cy="82" r="6" fill="#FF9AA2" stroke="none" opacity=".7"/><circle cx="83" cy="82" r="6" fill="#FF9AA2" stroke="none" opacity=".7"/>
+    <path d="M50 86 Q60 95 70 86" fill="none"/></g>`,
+  hair: `<g stroke="${INK}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M20 84 C8 44 28 12 60 12 C92 12 112 44 100 84 C98 96 92 104 84 108 C88 92 86 76 82 64 C72 60 66 52 62 44 C56 56 44 62 38 64 C34 76 32 92 36 108 C28 104 22 96 20 84Z" fill="#6B3E26"/>
+    <path d="M42 24 Q32 40 30 62 M60 18 Q62 30 62 40 M78 24 Q88 40 90 62" fill="none" stroke="#A86B45"/></g>
+    <g transform="rotate(-25 78 90)" stroke-linecap="round">
+    <path d="M58 90v12M64 90v12M70 90v12M76 90v12M82 90v12M88 90v12M94 90v12" stroke="${INK}" stroke-width="7"/>
+    <path d="M58 90v12M64 90v12M70 90v12M76 90v12M82 90v12M88 90v12M94 90v12" stroke="#FF7AB6" stroke-width="2.5"/>
+    <rect x="52" y="80" width="48" height="13" rx="5" fill="#FF7AB6" stroke="${INK}" stroke-width="4"/></g>`,
+  eyes: (() => { const e = `<path d="M14 66 Q36 42 58 66 Q36 88 14 66Z" fill="#fff"/>
+    <circle cx="36" cy="66" r="10.5" fill="#4D96FF"/><circle cx="36" cy="66" r="5" fill="${INK}" stroke="none"/>
+    <circle cx="32" cy="62" r="2.5" fill="#fff" stroke="none"/>
+    <path d="M19 57 l-6 -6 M26 52 l-4 -7 M35 49 l-1 -8" fill="none"/>
+    <path d="M14 36 Q34 24 56 34" fill="none" stroke="#6B3E26" stroke-width="7"/>`;
+    return `<g stroke="${INK}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">${e}<g transform="translate(120 0) scale(-1 1)">${e}</g></g>`; })(),
+  nose: `<g stroke="${INK}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M60 14 C56 40 46 60 40 72 C28 76 26 94 40 98 C47 101 53 97 57 95 C59 99 61 99 63 95 C67 97 73 101 80 98 C94 94 92 76 80 72 C74 60 64 40 60 14Z" fill="${SKIN}"/>
+    <ellipse cx="49" cy="89" rx="5.5" ry="3.5" fill="${INK}" stroke="none"/><ellipse cx="71" cy="89" rx="5.5" ry="3.5" fill="${INK}" stroke="none"/>
+    <path d="M57 32 Q53 50 48 62" fill="none" stroke="#fff" opacity=".85"/></g>`,
+  arms: `<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 62 L20 74 L14 44 M80 62 L100 74 L106 44" stroke="${INK}" stroke-width="22"/>
+    <path d="M40 62 L20 74 L14 44 M80 62 L100 74 L106 44" stroke="${SKIN}" stroke-width="14"/></g>
+    <g stroke="${INK}" stroke-width="4" stroke-linejoin="round">
+    <circle cx="14" cy="35" r="10" fill="${SKIN}"/><circle cx="106" cy="35" r="10" fill="${SKIN}"/>
+    <path d="M44 52 L27 62 L33 77 L47 70Z M76 52 L93 62 L87 77 L73 70Z" fill="#4D96FF"/>
+    <rect x="52" y="34" width="16" height="14" rx="4" fill="${SKIN}"/>
+    <path d="M36 50 Q60 42 84 50 L82 108 H38Z" fill="#4D96FF"/>
+    <path d="M52 46 Q60 54 68 46" fill="none"/></g>`,
+  hand: `<g fill="none" stroke-linecap="round">
+    <path d="M48 58 L45 22 M60 56 L60 16 M72 58 L75 22 M82 66 L90 38 M44 78 L24 60" stroke="${INK}" stroke-width="19"/></g>
+    <rect x="38" y="52" width="50" height="52" rx="22" fill="${SKIN}" stroke="${INK}" stroke-width="4"/>
+    <path d="M48 58 L45 22 M60 56 L60 16 M72 58 L75 22 M82 66 L90 38 M44 78 L24 60" stroke="${SKIN}" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path d="M52 82 Q63 88 74 80" stroke="#E5A27C" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <rect x="44" y="98" width="38" height="16" rx="5" fill="#4D96FF" stroke="${INK}" stroke-width="4"/>`,
+  legs: `<g fill="none" stroke-linecap="round">
+    <path d="M44 48 L42 94 M76 48 L78 94" stroke="${INK}" stroke-width="22"/>
+    <path d="M44 48 L42 94 M76 48 L78 94" stroke="${SKIN}" stroke-width="14"/></g>
+    <g stroke="${INK}" stroke-width="4" stroke-linejoin="round">
+    <path d="M28 12 H92 L94 54 H66 L60 40 L54 54 H26Z" fill="#3D5AFE"/>
+    <path d="M28 22 H92" fill="none" stroke-width="3"/>
+    <path d="M33 92 H52 V110 H20 Q20 96 33 92Z M87 92 H68 V110 H100 Q100 96 87 92Z" fill="#FF6B6B"/></g>
+    <path d="M23 104 H50 M70 104 H97" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`
+};
+const PARTS = [
+  {id:'head', word:'Head', th:'ศีรษะ (หัว)', cmds:[['Touch your head','แตะศีรษะ'],['Point to your head','ชี้ไปที่ศีรษะ'],['Nod your head','พยักหน้า'],['Shake your head','ส่ายศีรษะ']]},
+  {id:'hair', word:'Hair', th:'ผม', cmds:[['Touch your hair','แตะผม'],['Point to your hair','ชี้ไปที่ผม'],['Brush your hair','หวีผม']]},
+  {id:'eyes', word:'Eyes', th:'ตา', cmds:[['Point to your eyes','ชี้ไปที่ตา'],['Close your eyes','หลับตา'],['Open your eyes','ลืมตา']]},
+  {id:'nose', word:'Nose', th:'จมูก', cmds:[['Touch your nose','แตะจมูก'],['Point to your nose','ชี้ไปที่จมูก']]},
+  {id:'arms', word:'Arms', th:'แขน', cmds:[['Touch your arms','แตะแขน'],['Wave your arms','โบกแขน'],['Raise your arms','ยกแขนขึ้น']]},
+  {id:'hand', word:'Hand', th:'มือ', cmds:[['Raise your hand','ยกมือขึ้น'],['Wave your hand','โบกมือ'],['Show me your hand','ให้ดูมือหน่อย']]},
+  {id:'legs', word:'Legs', th:'ขา', cmds:[['Touch your legs','แตะขา'],['Shake your legs','เขย่าขา'],['Move your legs','ขยับขา']]}
+];
+PARTS.forEach(p => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="240" height="240">${ART[p.id]}</svg>`;
+  p.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  p.img = new Image(); p.img.src = p.src;
+});
+const pic = (p, cls = '') => `<img class="${cls}" src="${p.src}" alt="${p.word}">`;
+
+const DIFF = {
+  easy:   {label:'ง่าย', monsters:2, speed:2.4, chase:0.45},
+  normal: {label:'ปกติ', monsters:3, speed:3.0, chase:0.62},
+  hard:   {label:'ยาก',  monsters:4, speed:3.7, chase:0.78}
+};
+const PLAYER_SPEED = 5.2; // tiles per second
+const DIRS = {up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0}};
+const OPP = {up:'down', down:'up', left:'right', right:'left'};
+
+/* ---------- Parse map ---------- */
+const grid = [];
+const roomCells = {};
+let START = {x:10, y:8};
+for (let y = 0; y < ROWS; y++) {
+  grid.push([]);
+  for (let x = 0; x < COLS; x++) {
+    const ch = MAP[y][x];
+    if (ch === '#') grid[y].push({t:'w'});
+    else if (ch >= '1' && ch <= '7') {
+      const r = +ch - 1;
+      grid[y].push({t:'r', r});
+      (roomCells[r] = roomCells[r] || []).push({x, y});
+    } else {
+      grid[y].push({t:'p', door: ch === 'd'});
+      if (ch === 'P') START = {x, y};
+    }
+  }
+}
+const cell = (x, y) => (y >= 0 && y < ROWS && x >= 0 && x < COLS) ? grid[y][x] : {t:'w'};
+const ROOMS = Object.keys(roomCells).sort().map(k => {
+  const cells = roomCells[k];
+  const xs = cells.map(c => c.x), ys = cells.map(c => c.y);
+  const doors = [];
+  for (const c of cells) for (const d in DIRS) {
+    const nx = c.x + DIRS[d].x, ny = c.y + DIRS[d].y;
+    if (cell(nx, ny).door) doors.push({x:nx, y:ny, side:d});
+  }
+  return {x0:Math.min(...xs), y0:Math.min(...ys), x1:Math.max(...xs), y1:Math.max(...ys), doors, part:0, done:false};
+});
+
+/* ---------- State ---------- */
+const S = {
+  state:'menu', name:'', lastRec:null, diff:'normal', showWords:false, sound:true, varied:true, showTh:false, cmd:null,
+  lives:10, time:0, order:[], idx:0, readyT:0, invT:0
+};
+let player = null, monsters = [], particles = [];
+
+/* ---------- DOM ---------- */
+const $ = s => document.querySelector(s);
+const canvas = $('#game'), ctx = canvas.getContext('2d'), stage = $('#stage');
+const elTime = $('#time'), elLives = $('#lives'), elFound = $('#found');
+const elCmd = $('#cmdText'), elStep = $('#cmdStep'), elToast = $('#toast');
+
+/* ---------- Theme colours for canvas ---------- */
+const C = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  ['maze-bg','wall','wall-hi','room','room-done','room-text','door','ok'].forEach(k => C[k] = cs.getPropertyValue('--' + k).trim());
+}
+readTheme();
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme); } catch (e) {}
+new MutationObserver(readTheme).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+
+/* ---------- Sizing ---------- */
+let T = 24, dpr = 1;
+function resize() {
+  const r = stage.getBoundingClientRect();
+  T = Math.max(8, Math.floor(Math.min(r.width / COLS, r.height / ROWS)));
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  canvas.style.width = (COLS * T) + 'px';
+  canvas.style.height = (ROWS * T) + 'px';
+  canvas.width = Math.round(COLS * T * dpr);
+  canvas.height = Math.round(ROWS * T * dpr);
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+/* ---------- Helpers ---------- */
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fmt = s => { s = Math.floor(s); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const ent = t => ({fx:t.x, fy:t.y, tx:t.x, ty:t.y, prog:0, moving:false, dir:null, want:null});
+const pos = e => ({x:e.fx + (e.tx - e.fx) * e.prog, y:e.fy + (e.ty - e.fy) * e.prog});
+function pickCommand(p) {
+  if (!S.varied) return ['Touch your ' + p.word.toLowerCase(), 'แตะ' + p.th.replace(/ \(.*\)/, '')];
+  return p.cmds[Math.floor(Math.random() * p.cmds.length)];
+}
+
+/* ---------- Sound ---------- */
+let ac = null;
+function initAudio() {
+  try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) { ac = null; }
+}
+function tone(freq, dur, type = 'sine', vol = 0.14, delay = 0, slideTo = null) {
+  if (!S.sound || !ac) return;
+  try {
+    const o = ac.createOscillator(), g = ac.createGain(), t0 = ac.currentTime + delay;
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+  } catch (e) {}
+}
+const sfx = {
+  good(){ tone(660,.12,'triangle'); tone(880,.12,'triangle',.14,.1); tone(1320,.25,'triangle',.14,.2); },
+  bad(){ tone(260,.28,'sawtooth',.09,0,140); },
+  hit(){ tone(500,.45,'square',.07,0,90); },
+  win(){ [523,659,784,1047,784,1047].forEach((f,i)=>tone(f,.22,'triangle',.13,i*.13)); },
+  lose(){ [392,330,262,196].forEach((f,i)=>tone(f,.3,'sawtooth',.07,i*.22)); },
+  tick(){ tone(880,.06,'sine',.06); }
+};
+let voice = null;
+function pickVoice() {
+  if (!('speechSynthesis' in window)) return;
+  const vs = speechSynthesis.getVoices();
+  voice = vs.find(v => /en[-_]US/i.test(v.lang) && /female|samantha|aria|jenny|google us/i.test(v.name))
+       || vs.find(v => /en[-_](US|GB)/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+}
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text, cancel = false) {
+  if (!S.sound || !('speechSynthesis' in window)) return;
+  try {
+    if (cancel) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.85; u.pitch = 1.1;
+    if (voice) u.voice = voice;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* ---------- UI ---------- */
+let toastTimer = null;
+function toast(html, kind = '', ms = 1300) {
+  elToast.innerHTML = html;
+  elToast.className = 'toast show ' + kind;
+  clearTimeout(toastTimer);
+  if (ms) toastTimer = setTimeout(() => elToast.className = 'toast', ms);
+}
+function hideToast() { clearTimeout(toastTimer); elToast.className = 'toast'; }
+
+function renderCollection() {
+  $('#collection').innerHTML = PARTS.map((p, i) => {
+    const done = ROOMS.some(r => r.done && r.part === i);
+    return `<div class="slot ${done ? 'done' : ''}"><div class="e">${done ? pic(p) : '❔'}</div><div class="w">${done ? p.word : '???'}</div></div>`;
+  }).join('');
+}
+function updateHUD() {
+  elLives.textContent = S.lives;
+  elFound.textContent = S.idx + '/7';
+  elTime.textContent = fmt(S.time);
+}
+function setCommand() {
+  if (S.idx >= 7) return;
+  const p = PARTS[S.order[S.idx]];
+  S.cmd = pickCommand(p);
+  const w = p.word.toLowerCase();
+  elCmd.innerHTML = S.cmd[0].replace(w, `<span class="part">${w}</span>`) + (S.showTh ? `<small class="cmd-th">${S.cmd[1]}</small>` : '');
+  elStep.textContent = `ข้อ ${S.idx + 1}/7`;
+  elCmd.classList.remove('pop'); void elCmd.offsetWidth; elCmd.classList.add('pop');
+}
+function sayCommand(cancel = false) {
+  if (S.idx < 7 && S.cmd) speak(S.cmd[0], cancel);
+}
+
+/* ---------- Game flow ---------- */
+function newGame() {
+  initAudio();
+  const perm = shuffle([0,1,2,3,4,5,6]);
+  ROOMS.forEach((r, i) => { r.part = perm[i]; r.done = false; });
+  S.order = shuffle([0,1,2,3,4,5,6]);
+  S.idx = 0; S.lives = 10; S.time = 0;
+  particles = [];
+  resetPositions();
+  hideOverlays();
+  renderCollection(); updateHUD(); setCommand();
+  S.state = 'ready'; S.readyT = 1.8;
+  toast('Ready?<small>เตรียมตัว…</small>', '', 0);
+  speak('Ready? ' + S.cmd[0], true);
+}
+function resetPositions() {
+  player = ent(START);
+  const d = DIFF[S.diff];
+  monsters = MONSTER_HOMES.slice(0, d.monsters).map((h, i) => Object.assign(ent(h), {
+    color: MONSTER_COLORS[i], chase: d.chase, delay: 0.6 + i * 1.6, wob: Math.random() * 6
+  }));
+  distKey = '';
+}
+function enterRoom(ri) {
+  const room = ROOMS[ri], part = PARTS[room.part];
+  const target = S.order[S.idx];
+  if (room.part === target) {
+    room.done = true; S.idx++;
+    sfx.good(); burst(room);
+    renderCollection(); updateHUD();
+    if (S.idx >= 7) { win(); return; }
+    S.invT = 1.6; // short safety blink so Robo can walk away from the door
+    toast(`Great! ${pic(part)} ${part.word}<small>ถูกต้อง! (${part.th})</small>`, 'good', 1200);
+    speak('Great! ' + part.word + '!', true);
+    setCommand(); sayCommand();
+  } else {
+    loseLife(`Oops! That’s ${pic(part)} ${part.word}<small>ห้องนี้คือ “${part.th}” ลองใหม่นะ −1 ♥</small>`, 'Oops! That’s ' + part.word.toLowerCase() + '.');
+  }
+}
+function loseLife(html, spoken) {
+  S.lives--; updateHUD();
+  stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+  if (S.lives <= 0) { sfx.lose(); gameOver(); return; }
+  sfx.bad();
+  resetPositions();
+  S.state = 'ready'; S.readyT = 1.9;
+  toast(html, 'bad', 1800);
+  speak(spoken, true); sayCommand();
+}
+function win() {
+  S.state = 'win'; sfx.win();
+  speak('Excellent! You found all the body parts!', true);
+  const rank = addRecord(true);
+  setTimeout(() => showEnd(true, rank), 900);
+}
+function gameOver() {
+  S.state = 'over';
+  speak('Game over. Try again!', true);
+  const rank = addRecord(false);
+  setTimeout(() => showEnd(false, rank), 700);
+}
+function showEnd(won, rank) {
+  hideToast();
+  const stars = STARS(S.lives), who = esc(S.name);
+  const vocab = PARTS.map(p => `<span>${pic(p)} ${p.word} = ${p.th}</span>`).join('');
+  const rankLine = `<p class="rank-line">🏆 ${who} ได้อันดับที่ ${rank} ในโหมด${DIFF[S.diff].label}</p>`;
+  const btns = `<div class="row"><button class="btn primary" data-act="again">↻ เล่นอีกครั้ง</button><button class="btn" data-act="records">🏆 ตารางคะแนน</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn" data-act="home">☰ เมนูหลัก</button></div>`;
+  $('#endCard').innerHTML = won ? `
+    <h2>🎉 Robo is complete!</h2>
+    <p>เก่งมาก ${who}! ช่วยโรโบเก็บชิ้นส่วนร่างกายครบทั้ง 7 ชิ้นแล้ว</p>
+    <div class="stars">${[0,1,2].map(i => `<span class="${i < stars ? '' : 'off'}">⭐</span>`).join('')}</div>
+    <div class="result">
+      <div><b>${fmt(S.time)}</b><span>เวลาที่ใช้</span></div>
+      <div><b>${S.lives}/10</b><span>ชีวิตที่เหลือ</span></div>
+    </div>
+    ${rankLine}
+    <div class="vocab">${vocab}</div>${btns}`
+  : `
+    <h2>💥 Game over</h2>
+    <p>ชีวิตหมดแล้ว ${who} เก็บได้ ${S.idx}/7 ชิ้น ในเวลา ${fmt(S.time)} ลองอีกครั้งนะ!</p>
+    ${rankLine}
+    <div class="vocab">${vocab}</div>${btns}`;
+  $('#endOv').classList.add('show');
+  const b = $('#endCard [data-act="again"]'); if (b) b.focus();
+}
+
+/* ---------- Records (saved in this browser only) ---------- */
+const REC_KEY = 'bodyMaze.records';
+const STARS = lives => lives >= 8 ? 3 : lives >= 5 ? 2 : 1;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = ms => { try { return new Date(ms).toLocaleString('th-TH', {day:'numeric', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return ''; } };
+function loadRecords() { try { const v = JSON.parse(localStorage.getItem(REC_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+function saveRecords(list) { try { localStorage.setItem(REC_KEY, JSON.stringify(list)); } catch (e) {} }
+// best first: more parts found, then faster time, then more lives left
+const cmpRec = (a, b) => (b.found - a.found) || (a.time - b.time) || (b.lives - a.lives) || (a.date - b.date);
+function addRecord(won) {
+  const rec = {id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), name: S.name, diff: S.diff,
+    time: Math.round(S.time * 10) / 10, lives: Math.max(0, S.lives), found: S.idx, won, stars: won ? STARS(S.lives) : 0,
+    help: !!(S.showWords || S.showTh), date: Date.now()};
+  let all = loadRecords(); all.push(rec);
+  const keep = [];
+  for (const d of Object.keys(DIFF)) keep.push(...all.filter(r => r.diff === d).sort(cmpRec).slice(0, 300));
+  saveRecords(keep);
+  S.lastRec = rec.id;
+  const list = keep.filter(r => r.diff === S.diff).sort(cmpRec);
+  const i = list.findIndex(r => r.id === rec.id);
+  return i >= 0 ? i + 1 : list.length + 1;
+}
+let recTab = 'normal', clearArm = null;
+function openRecords(diff) {
+  hideOverlays(); hideToast();
+  recTab = diff || S.diff;
+  renderRecords();
+  $('#recOv').classList.add('show');
+  const me = document.querySelector('#recBody tr.me'); if (me) me.scrollIntoView({block:'nearest'});
+}
+function renderRecords() {
+  clearTimeout(clearArm); clearArm = null; $('#recClear').textContent = 'ล้างประวัติโหมดนี้';
+  document.querySelectorAll('#recTabs button').forEach(b => { const on = b.dataset.d === recTab; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+  const list = loadRecords().filter(r => r.diff === recTab).sort(cmpRec);
+  const medal = ['🥇', '🥈', '🥉'];
+  $('#recBody').innerHTML = list.length ? list.map((r, i) => `<tr class="${r.id === S.lastRec ? 'me' : ''}">
+      <td>${medal[i] || i + 1}</td>
+      <td class="nm" title="${esc(r.name)}">${esc(r.name)}${r.help ? '<span class="tag">โหมดช่วย</span>' : ''}</td>
+      <td>${r.found === 7 ? '✅ ครบ 7/7' : `<span class="lost">💥 ${r.found}/7</span>`}</td>
+      <td>${fmt(r.time)}</td>
+      <td>${r.lives}/10</td>
+      <td>${r.won ? '⭐'.repeat(r.stars) : '–'}</td>
+      <td>${fmtDate(r.date)}</td>
+    </tr>`).join('')
+    : `<tr><td colspan="7" class="empty">ยังไม่มีใครเล่นโหมด${DIFF[recTab].label} กด Start เพื่อเป็นคนแรก!</td></tr>`;
+}
+function hideOverlays() { document.querySelectorAll('.overlay').forEach(o => o.classList.remove('show')); }
+function openHome() {
+  S.state = 'menu'; hideOverlays(); hideToast();
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  elCmd.textContent = 'Press Start!'; elStep.textContent = '';
+  $('#home').classList.add('show');
+  $('#homeStart').focus();
+}
+function openSetup() {
+  hideOverlays();
+  $('#menu').classList.add('show');
+  const inp = $('#playerName');
+  inp.value = S.name || ''; $('#nameErr').textContent = '';
+  setTimeout(() => { inp.focus(); inp.select(); }, 60);
+}
+function startFromSetup() {
+  const n = $('#playerName').value.trim().replace(/\s+/g, ' ').slice(0, 20);
+  if (!n) { $('#nameErr').textContent = 'กรุณาพิมพ์ชื่อก่อนเริ่มเกม'; $('#playerName').focus(); return; }
+  S.name = n;
+  const ns = $('#nameStat'); ns.textContent = '👤 ' + n; ns.style.display = '';
+  newGame();
+}
+function pause() {
+  if (S.state !== 'play' && S.state !== 'ready') return;
+  S.prevState = S.state; S.state = 'paused';
+  $('#pauseOv').classList.add('show');
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+function resume() {
+  if (S.state !== 'paused') return;
+  $('#pauseOv').classList.remove('show');
+  S.state = S.prevState || 'ready';
+  if (S.state === 'play') { S.state = 'ready'; S.readyT = 1.0; toast('Ready?', '', 0); }
+  sayCommand(true);
+}
+/* ---------- Movement ---------- */
+/* Robo walks only while a direction is held; on release he finishes the current tile and stops. */
+const keysHeld = []; let padDir = null, touchDir = null;
+function heldDir() { return padDir || touchDir || (keysHeld.length ? keysHeld[keysHeld.length - 1] : null); }
+/* Rooms are walkable from any side: stepping onto a picture that is not yet found = answering.
+   Found pictures can be walked through. Monsters only walk on paths, so they never enter a picture. */
+function canStep(fx, fy, tx, ty) {
+  return cell(tx, ty).t !== 'w';
+}
+function stepPlayer(dt) {
+  const p = player, h = heldDir();
+  p.want = h;
+  let rem = PLAYER_SPEED * dt, guard = 0;
+  while (rem > 1e-6 && guard++ < 6 && S.state === 'play') {
+    if (p.moving) {
+      if (h && h === OPP[p.dir]) {
+        [p.fx, p.tx] = [p.tx, p.fx]; [p.fy, p.ty] = [p.ty, p.fy];
+        p.prog = 1 - p.prog; p.dir = h;
+      } else if (h && h !== p.dir && p.prog < 0.35 && canStep(p.fx, p.fy, p.fx + DIRS[h].x, p.fy + DIRS[h].y)) {
+        // just passed a junction: snap back so the turn is easy for small hands
+        p.tx = p.fx; p.ty = p.fy; p.prog = 0; p.moving = false; continue;
+      }
+      const s = Math.min(rem, 1 - p.prog); p.prog += s; rem -= s;
+      if (p.prog >= 1 - 1e-6) {
+        p.fx = p.tx; p.fy = p.ty; p.prog = 0; p.moving = false;
+        const here = cell(p.fx, p.fy);
+        if (here.t === 'r' && !ROOMS[here.r].done) { enterRoom(here.r); if (S.state !== 'play') return; }
+      }
+    } else {
+      if (!h) break;
+      const nx = p.fx + DIRS[h].x, ny = p.fy + DIRS[h].y;
+      p.dir = h;
+      if (canStep(p.fx, p.fy, nx, ny)) { p.tx = nx; p.ty = ny; p.prog = 0; p.moving = true; }
+      else break;
+    }
+  }
+}
+let dist = null, distKey = '';
+function updateDist() {
+  const pp = pos(player), px = Math.round(pp.x), py = Math.round(pp.y), k = px + ',' + py;
+  if (k === distKey) return;
+  distKey = k;
+  if (cell(px, py).t !== 'p') { dist = null; return; } // Robo is inside a room: monsters wander
+  dist = Array.from({length:ROWS}, () => new Array(COLS).fill(1e9));
+  dist[py][px] = 0;
+  const q = [[px, py]];
+  for (let i = 0; i < q.length; i++) {
+    const [x, y] = q[i];
+    for (const d in DIRS) {
+      const nx = x + DIRS[d].x, ny = y + DIRS[d].y;
+      if (cell(nx, ny).t === 'p' && dist[ny][nx] > dist[y][x] + 1) { dist[ny][nx] = dist[y][x] + 1; q.push([nx, ny]); }
+    }
+  }
+}
+function chooseMonsterDir(m) {
+  const opts = Object.keys(DIRS).filter(d => cell(m.fx + DIRS[d].x, m.fy + DIRS[d].y).t === 'p');
+  let cand = opts.filter(d => d !== OPP[m.dir]);
+  if (!cand.length) cand = opts;
+  if (!cand.length) return;
+  let d;
+  if (Math.random() < m.chase && dist) {
+    let best = 1e9;
+    for (const c of cand) { const v = dist[m.fy + DIRS[c].y][m.fx + DIRS[c].x]; if (v < best) { best = v; d = c; } }
+  } else d = cand[Math.floor(Math.random() * cand.length)];
+  m.dir = d; m.tx = m.fx + DIRS[d].x; m.ty = m.fy + DIRS[d].y; m.prog = 0; m.moving = true;
+}
+function stepMonster(m, dt) {
+  if (m.delay > 0) { m.delay -= dt; return; }
+  const speed = DIFF[S.diff].speed * (1 + 0.025 * S.idx);
+  let rem = speed * dt, guard = 0;
+  while (rem > 1e-6 && guard++ < 6) {
+    if (!m.moving) { chooseMonsterDir(m); if (!m.moving) break; }
+    const s = Math.min(rem, 1 - m.prog); m.prog += s; rem -= s;
+    if (m.prog >= 1 - 1e-6) { m.fx = m.tx; m.fy = m.ty; m.prog = 0; m.moving = false; }
+  }
+}
+function checkHits() {
+  if (S.invT > 0) return;
+  const p = pos(player);
+  for (const m of monsters) {
+    const q = pos(m);
+    if (Math.hypot(p.x - q.x, p.y - q.y) < 0.62) {
+      sfx.hit();
+      loseLife('Ouch! 👾<small>โดนมอนสเตอร์จับได้ −1 ♥</small>', 'Ouch!');
+      return;
+    }
+  }
+}
+
+/* ---------- Particles ---------- */
+function burst(room) {
+  const cx = (room.x0 + room.x1 + 1) / 2, cy = (room.y0 + room.y1 + 1) / 2;
+  for (let i = 0; i < 36; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 5;
+    particles.push({x:cx, y:cy, vx:Math.cos(a) * sp, vy:Math.sin(a) * sp - 2, life:1, c:ROOM_COLORS[i % 7], s:0.12 + Math.random() * 0.12});
+  }
+}
+function stepParticles(dt) {
+  for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 9 * dt; q.life -= dt * 0.9; }
+  particles = particles.filter(q => q.life > 0);
+}
+
+/* ---------- Drawing ---------- */
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+}
+function draw(t) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = C['maze-bg'];
+  ctx.fillRect(0, 0, COLS * T, ROWS * T);
+
+  // walls
+  const isW = (x, y) => cell(x, y).t === 'w' && x >= 0 && y >= 0 && x < COLS && y < ROWS;
+  const rad = T * 0.4;
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    if (grid[y][x].t !== 'w') continue;
+    const up = y === 0 || isW(x, y - 1), dn = y === ROWS - 1 || isW(x, y + 1);
+    const lf = x === 0 || isW(x - 1, y), rt = x === COLS - 1 || isW(x + 1, y);
+    ctx.fillStyle = C.wall;
+    rr(x * T, y * T, T, T, [!up && !lf ? rad : 0, !up && !rt ? rad : 0, !dn && !rt ? rad : 0, !dn && !lf ? rad : 0]);
+    ctx.fill();
+    if (!up) { ctx.fillStyle = C['wall-hi']; ctx.fillRect(x * T + (lf ? 0 : rad), y * T, T - (lf ? 0 : rad) - (rt ? 0 : rad), Math.max(2, T * 0.1)); }
+  }
+
+  // path dots (subtle guide)
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    if (grid[y][x].t === 'p') { ctx.beginPath(); ctx.arc((x + .5) * T, (y + .5) * T, T * 0.06, 0, 7); ctx.fill(); }
+  }
+
+  // rooms
+  ROOMS.forEach((rm, i) => drawRoom(rm, i, t));
+
+  // start marker
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.arc((START.x + .5) * T, (START.y + .5) * T, T * 0.45, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+
+  if (player && S.state !== 'menu') {
+    monsters.forEach(m => drawMonster(m, t));
+    drawPlayer(t);
+  }
+
+  // particles
+  for (const q of particles) {
+    ctx.globalAlpha = Math.max(0, q.life);
+    ctx.fillStyle = q.c;
+    ctx.fillRect(q.x * T - q.s * T / 2, q.y * T - q.s * T / 2, q.s * T, q.s * T);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawRoom(rm, i, t) {
+  const part = PARTS[rm.part];
+  const pad = Math.max(2, T * 0.1);
+  const x = rm.x0 * T + pad, y = rm.y0 * T + pad, w = (rm.x1 - rm.x0 + 1) * T - pad * 2, h = (rm.y1 - rm.y0 + 1) * T - pad * 2;
+  ctx.fillStyle = rm.done ? C['room-done'] : C.room;
+  rr(x, y, w, h, T * 0.45); ctx.fill();
+  ctx.lineWidth = Math.max(2, T * 0.14);
+  ctx.strokeStyle = rm.done ? C.ok : ROOM_COLORS[i];
+  ctx.stroke();
+
+  // picture
+  const label = S.showWords || rm.done;
+  const cx = x + w / 2;
+  const size = Math.min(w, h) * (label ? 0.66 : 0.86);
+  const ey = y + h * (label ? 0.4 : 0.5);
+  ctx.globalAlpha = rm.done ? 0.45 : 1;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (part.img.complete && part.img.naturalWidth) ctx.drawImage(part.img, cx - size / 2, ey - size / 2, size, size);
+  ctx.globalAlpha = 1;
+
+  if (label) {
+    ctx.fillStyle = C['room-text'];
+    ctx.font = `700 ${Math.max(9, Math.min(T * 0.62, h * 0.24))}px Mali, sans-serif`;
+    ctx.fillText(part.word, cx, y + h * 0.84);
+  }
+  if (rm.done) {
+    const r = T * 0.42, bx = x + w - r * 0.6, by = y + r * 0.6;
+    ctx.fillStyle = C.ok; ctx.beginPath(); ctx.arc(bx, by, r, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, T * 0.1); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx - r * .45, by); ctx.lineTo(bx - r * .1, by + r * .38); ctx.lineTo(bx + r * .5, by - r * .35); ctx.stroke();
+  }
+}
+function drawPlayer(t) {
+  const p = pos(player);
+  const cx = (p.x + .5) * T, cy = (p.y + .5) * T + Math.sin(t / 140) * T * 0.03;
+  if (S.invT > 0 && Math.floor(t / 110) % 2) ctx.globalAlpha = 0.35;
+  const s = T * 0.43, ink = '#1f1b46';
+  ctx.lineWidth = Math.max(1.5, T * 0.07); ctx.strokeStyle = ink;
+  // antenna
+  ctx.beginPath(); ctx.moveTo(cx, cy - s * 0.75); ctx.lineTo(cx, cy - s * 1.15); ctx.stroke();
+  ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(cx, cy - s * 1.2, s * 0.2, 0, 7); ctx.fill();
+  // head/body
+  ctx.fillStyle = '#ffd23f';
+  rr(cx - s, cy - s * 0.8, s * 2, s * 1.75, s * 0.7); ctx.fill(); ctx.stroke();
+  // eyes look in movement direction
+  const v = DIRS[player.dir || player.want || 'down'] || {x:0, y:0};
+  for (const ex of [-0.42, 0.42]) {
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + ex * s, cy - s * 0.05, s * 0.3, 0, 7); ctx.fill();
+    ctx.lineWidth = Math.max(1, T * 0.04); ctx.stroke();
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(cx + ex * s + v.x * s * 0.12, cy - s * 0.05 + v.y * s * 0.12, s * 0.14, 0, 7); ctx.fill();
+  }
+  ctx.lineWidth = Math.max(1.5, T * 0.06);
+  ctx.beginPath(); ctx.arc(cx, cy + s * 0.35, s * 0.25, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+function drawMonster(m, t) {
+  const p = pos(m), pp = pos(player);
+  const cx = (p.x + .5) * T, cy = (p.y + .5) * T;
+  const wob = 1 + Math.sin(t / 120 + m.wob) * 0.05;
+  const r = T * 0.42 * wob;
+  ctx.globalAlpha = m.delay > 0 ? 0.55 : 1;
+  ctx.fillStyle = m.color;
+  // horns
+  ctx.beginPath();
+  ctx.moveTo(cx - r * 0.75, cy - r * 0.45); ctx.lineTo(cx - r * 0.55, cy - r * 1.25); ctx.lineTo(cx - r * 0.2, cy - r * 0.75);
+  ctx.moveTo(cx + r * 0.75, cy - r * 0.45); ctx.lineTo(cx + r * 0.55, cy - r * 1.25); ctx.lineTo(cx + r * 0.2, cy - r * 0.75);
+  ctx.fill();
+  // spiky body
+  ctx.beginPath();
+  const spikes = 12;
+  for (let i = 0; i <= spikes * 2; i++) {
+    const a = (i / (spikes * 2)) * Math.PI * 2;
+    const rad = i % 2 ? r : r * 0.86;
+    const px = cx + Math.cos(a) * rad, py = cy + Math.sin(a) * rad;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.fill();
+  // one big eye looking at Robo
+  let ax = pp.x - p.x, ay = pp.y - p.y; const len = Math.hypot(ax, ay) || 1; ax /= len; ay /= len;
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy - r * 0.15, r * 0.38, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1f1b46'; ctx.beginPath(); ctx.arc(cx + ax * r * 0.15, cy - r * 0.15 + ay * r * 0.15, r * 0.18, 0, 7); ctx.fill();
+  // mouth + teeth
+  ctx.fillStyle = '#1f1b46';
+  ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.45, r * 0.4, r * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.moveTo(cx - r * 0.22, cy + r * 0.3); ctx.lineTo(cx - r * 0.12, cy + r * 0.48); ctx.lineTo(cx - r * 0.02, cy + r * 0.3);
+  ctx.moveTo(cx + r * 0.02, cy + r * 0.3); ctx.lineTo(cx + r * 0.12, cy + r * 0.48); ctx.lineTo(cx + r * 0.22, cy + r * 0.3); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- Main loop ---------- */
+let last = performance.now();
+function frame(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  if (S.state === 'play') {
+    S.time += dt;
+    if (S.invT > 0) S.invT -= dt;
+    updateDist();
+    stepPlayer(dt);
+    if (S.state === 'play') {
+      updateDist();
+      monsters.forEach(m => stepMonster(m, dt));
+      checkHits();
+    }
+    elTime.textContent = fmt(S.time);
+  } else if (S.state === 'ready') {
+    S.readyT -= dt;
+    if (S.readyT <= 0) { S.state = 'play'; S.invT = 1.0; toast('Go!', 'good', 500); }
+  }
+  stepParticles(dt);
+  draw(t);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- Input ---------- */
+const KEY = {ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right', w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right'};
+window.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'text') {
+    if (e.key === 'Enter') { e.preventDefault(); startFromSetup(); }
+    return; // let the player type their name
+  }
+  const kd = KEY[e.key];
+  if (kd) {
+    e.preventDefault();
+    const i = keysHeld.indexOf(kd); if (i >= 0) keysHeld.splice(i, 1);
+    keysHeld.push(kd);
+    return;
+  }
+  if (e.key === ' ' && (S.state === 'play' || S.state === 'ready')) { e.preventDefault(); sayCommand(true); return; }
+  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { S.state === 'paused' ? resume() : pause(); }
+  if (e.key === 'Enter' && $('#menu').classList.contains('show')) { e.preventDefault(); startFromSetup(); }
+});
+window.addEventListener('keyup', e => {
+  const kd = KEY[e.key];
+  if (kd) { const i = keysHeld.indexOf(kd); if (i >= 0) keysHeld.splice(i, 1); }
+});
+function releaseAll() { keysHeld.length = 0; padDir = null; touchDir = null; padRelease(); }
+window.addEventListener('blur', releaseAll);
+
+// D-pad: hold a button to walk, slide your finger to another button to turn, lift to stop
+const dpad = $('#dpad');
+function padFromPoint(e) {
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const b = el && el.closest ? el.closest('.dpad button') : null;
+  padDir = b ? b.dataset.dir : null;
+  dpad.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+}
+function padRelease() { padDir = null; dpad.querySelectorAll('button').forEach(x => x.classList.remove('on')); }
+dpad.addEventListener('pointerdown', e => { e.preventDefault(); try { dpad.setPointerCapture(e.pointerId); } catch (_) {} padFromPoint(e); });
+dpad.addEventListener('pointermove', e => { if (dpad.hasPointerCapture && dpad.hasPointerCapture(e.pointerId)) padFromPoint(e); });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => dpad.addEventListener(ev, padRelease));
+dpad.addEventListener('contextmenu', e => e.preventDefault());
+
+// Touch on the map works like a joystick: touch, drag toward a direction and hold; lift to stop
+let touch0 = null;
+stage.addEventListener('touchstart', e => { const t = e.touches[0]; touch0 = {x:t.clientX, y:t.clientY}; touchDir = null; }, {passive:true});
+stage.addEventListener('touchmove', e => {
+  if (!touch0) return;
+  e.preventDefault();
+  const t = e.touches[0], dx = t.clientX - touch0.x, dy = t.clientY - touch0.y;
+  const m = Math.max(Math.abs(dx), Math.abs(dy));
+  if (m < 16) { touchDir = null; return; }
+  touchDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  if (m > 60) { touch0.x = t.clientX - dx / m * 60; touch0.y = t.clientY - dy / m * 60; }
+}, {passive:false});
+['touchend', 'touchcancel'].forEach(ev => stage.addEventListener(ev, () => { touch0 = null; touchDir = null; }));
+
+/* ---------- Buttons ---------- */
+$('#diffSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.diff = b.dataset.d;
+  document.querySelectorAll('#diffSeg button').forEach(x => x.classList.toggle('active', x === b));
+});
+$('#optWords').addEventListener('change', e => S.showWords = e.target.checked);
+$('#optTh').addEventListener('change', e => S.showTh = e.target.checked);
+$('#cmdSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.varied = b.dataset.v === '1';
+  document.querySelectorAll('#cmdSeg button').forEach(x => x.classList.toggle('active', x === b));
+});
+function setSound(on) {
+  S.sound = on; $('#optSound').checked = on; $('#soundBtn').textContent = on ? '🔊' : '🔇';
+  if (!on && 'speechSynthesis' in window) speechSynthesis.cancel();
+}
+$('#optSound').addEventListener('change', e => setSound(e.target.checked));
+$('#soundBtn').addEventListener('click', () => { initAudio(); setSound(!S.sound); });
+$('#startBtn').addEventListener('click', startFromSetup);
+$('#setupBack').addEventListener('click', openHome);
+$('#homeStart').addEventListener('click', () => { initAudio(); openSetup(); });
+$('#homeRec').addEventListener('click', () => openRecords(S.diff));
+$('#recClose').addEventListener('click', openHome);
+$('#recTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; recTab = b.dataset.d; renderRecords(); });
+$('#recClear').addEventListener('click', () => {
+  const b = $('#recClear');
+  if (!clearArm) {
+    b.textContent = 'กดอีกครั้งเพื่อยืนยันการล้าง';
+    clearArm = setTimeout(() => { clearArm = null; b.textContent = 'ล้างประวัติโหมดนี้'; }, 3000);
+    return;
+  }
+  saveRecords(loadRecords().filter(r => r.diff !== recTab));
+  renderRecords();
+});
+$('#sayBtn').addEventListener('click', () => { initAudio(); if (S.state !== 'menu') sayCommand(true); });
+$('#pauseBtn').addEventListener('click', () => S.state === 'paused' ? resume() : pause());
+$('#resumeBtn').addEventListener('click', resume);
+$('#restartBtn').addEventListener('click', newGame);
+$('#menuBtn').addEventListener('click', openHome);
+$('#endCard').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.act === 'again') newGame();
+  else if (b.dataset.act === 'records') openRecords(S.diff);
+  else openHome();
+});
+const fsBtn = $('#fsBtn');
+if (!document.fullscreenEnabled) fsBtn.style.display = 'none';
+fsBtn.addEventListener('click', () => {
+  try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) {}
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+/* ---------- Init ---------- */
+const perm0 = [0,1,2,3,4,5,6];
+ROOMS.forEach((r, i) => r.part = perm0[i]);
+renderCollection(); updateHUD();
+if (document.fonts) document.fonts.ready.then(() => draw(performance.now()));
+})();
+</script>
+</body>
+</html>
